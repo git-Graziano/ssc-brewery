@@ -18,6 +18,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * Created by jt on 6/20/20.
+ */
 @Slf4j
 public abstract class AbstractRestAuthFilter extends AbstractAuthenticationProcessingFilter {
 
@@ -32,50 +35,61 @@ public abstract class AbstractRestAuthFilter extends AbstractAuthenticationProce
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) res;
 
-        if (!requiresAuthentication(request, response)) {
-            chain.doFilter(request, response);
 
-            return;
+        if (logger.isDebugEnabled()) {
+            logger.debug("Request is to process authentication");
         }
 
-        if (log.isDebugEnabled()) {
-            log.debug("Request is to process authentication");
-        }
-
-        Authentication authResult;
         try {
-            authResult = attemptAuthentication(request, response);
+            Authentication authResult = attemptAuthentication(request, response);
 
-            if(authResult != null) {
+            if (authResult != null) {
                 successfulAuthentication(request, response, chain, authResult);
-            }
-            else {
+            } else {
                 chain.doFilter(request, response);
             }
-        }
-        catch (AuthenticationException e) {
-            log.error("Authentication failed" + e);
+        } catch (AuthenticationException e) {
+            log.error("Authentication Failed", e);
             unsuccessfulAuthentication(request, response, e);
         }
     }
 
+    @Override
+    protected void unsuccessfulAuthentication(HttpServletRequest request,
+                                              HttpServletResponse response, AuthenticationException failed)
+            throws IOException, ServletException {
+
+        SecurityContextHolder.clearContext();
+
+        if (log.isDebugEnabled()) {
+            log.debug("Authentication request failed: " + failed.toString(), failed);
+            log.debug("Updated SecurityContextHolder to contain null Authentication");
+        }
+
+        response.sendError(HttpStatus.UNAUTHORIZED.value(),
+                HttpStatus.UNAUTHORIZED.getReasonPhrase());
+    }
 
     @Override
-    public Authentication attemptAuthentication(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) throws AuthenticationException, IOException, ServletException {
-        String userName = getUserName(httpServletRequest);
-        String password = getPassword(httpServletRequest);
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
+        String userName = getUsername(request);
+        String password = getPassword(request);
 
-        if(userName == null) userName = "";
-        if(password == null ) password = "";
+        if (userName == null) {
+            userName = "";
+        }
 
-        log.debug("Authenticating User Name " + userName);
+        if (password == null) {
+            password = "";
+        }
+
+        log.debug("Authenticating User: " + userName);
 
         UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(userName, password);
 
-        if(!StringUtils.isEmpty(userName)) {
+        if (!StringUtils.isEmpty(userName)) {
             return this.getAuthenticationManager().authenticate(token);
-        }
-        else {
+        } else {
             return null;
         }
     }
@@ -85,28 +99,17 @@ public abstract class AbstractRestAuthFilter extends AbstractAuthenticationProce
                                             HttpServletResponse response, FilterChain chain, Authentication authResult)
             throws IOException, ServletException {
 
-        if (log.isDebugEnabled()) {
-            log.debug("Authentication success. Updating SecurityContextHolder to contain: "
+        if (logger.isDebugEnabled()) {
+            logger.debug("Authentication success. Updating SecurityContextHolder to contain: "
                     + authResult);
         }
 
         SecurityContextHolder.getContext().setAuthentication(authResult);
+
     }
 
-    @Override
-    protected void unsuccessfulAuthentication(HttpServletRequest request,
-                                              HttpServletResponse response, AuthenticationException failed)
-            throws IOException, ServletException {
-        SecurityContextHolder.clearContext();
+    protected abstract String getPassword(HttpServletRequest request);
 
-        if ( log.isDebugEnabled()) {
-            log.debug("Authentication request failed: " + failed.toString(), failed);
-            log.debug("Updated SecurityContextHolder to contain null Authentication");
-        }
+    protected abstract String getUsername(HttpServletRequest request);
 
-        response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
-    }
-
-    protected abstract String getPassword(HttpServletRequest httpServletRequest);
-    protected abstract String getUserName(HttpServletRequest httpServletRequest);
 }
