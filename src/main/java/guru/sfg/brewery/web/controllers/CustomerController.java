@@ -115,7 +115,7 @@ public class CustomerController {
             return "beers/createOrUpdateCustomer";
         } else {
             //ToDO: Add Service
-            Customer savedCustomer =  customerRepository.save(customer);
+            Customer savedCustomer = customerRepository.save(customer);
             return "redirect:/customers/" + savedCustomer.getId();
         }
     }

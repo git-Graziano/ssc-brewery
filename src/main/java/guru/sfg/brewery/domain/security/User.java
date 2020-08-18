@@ -34,12 +34,10 @@ public class User implements UserDetails, CredentialsContainer {
     @JoinTable(name = "user_role",
         joinColumns = {@JoinColumn(name = "USER_ID", referencedColumnName = "ID")},
         inverseJoinColumns = {@JoinColumn(name = "ROLE_ID", referencedColumnName = "ID")})
-
     private Set<Role> roles;
 
     @ManyToOne(fetch = FetchType.EAGER)
     private Customer customer;
-
 
     @Transient
     public Set<GrantedAuthority> getAuthorities() {
@@ -54,7 +52,7 @@ public class User implements UserDetails, CredentialsContainer {
 
     @Override
     public boolean isAccountNonExpired() {
-        return this.getAccountNonExpired();
+        return this.accountNonExpired;
     }
 
     @Override
@@ -64,12 +62,12 @@ public class User implements UserDetails, CredentialsContainer {
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return this.getCredentialsNonExpired();
+        return this.credentialsNonExpired;
     }
 
     @Override
     public boolean isEnabled() {
-        return this.isEnabled();
+        return this.enabled;
     }
 
     @Builder.Default
@@ -86,6 +84,6 @@ public class User implements UserDetails, CredentialsContainer {
 
     @Override
     public void eraseCredentials() {
-        password = null;
+        this.password = null;
     }
 }
